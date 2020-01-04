@@ -939,6 +939,8 @@ Update your `server/package.json` with scripts for heroku, and move typescript t
   "scripts": {
     "dev": "ts-node-dev --no-notify --respawn --transpileOnly ./src",
     "start": "npx ts-node --transpile-only ./src",
+    "heroku-deploy": "prisma deploy -e .env.prod",
+    "heroku-seed": "prisma seed -e .env.prod",
     "heroku-init": "npx heroku create",
     "heroku-config": "npx heroku config:set $(cat .env.prod | sed '/^$/d; /#[[:print:]]*$/d')",
     "heroku-push": "git push heroku master",
