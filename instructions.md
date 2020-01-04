@@ -494,7 +494,7 @@ To start from scratch, delete and recreate the `src` folder inside `client`.
 
 Inside `client`, create a tsconfig.json file with the following boilerplate code:
 
-`jsconfig.json`
+`tsconfig.json`
 
 ```json
 {
