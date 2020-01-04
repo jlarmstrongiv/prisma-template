@@ -10,7 +10,7 @@ import ApolloClient from 'apollo-boost';
 import { ApolloProvider } from '@apollo/react-hooks';
 
 const client = new ApolloClient({
-  uri: process.env.REACT_APP_APOLLO_SERVER_ENDPOINT || 'http://localhost:4000',
+  uri: process.env.REACT_APP_APOLLO_SERVER || 'http://localhost:4000',
 });
 
 const root = (
