@@ -1061,6 +1061,8 @@ Navigate to `servers`. Click `Add Server` and select all the Heroku options.
 
 Comment out your existing `endpoint` inside the `prisma.yml` file. Run `prisma deploy` and select your Heroku production database.
 
+It is recommended to install these libraries globally and login `npm install -g prisma heroku surge`
+
 ## Server
 
 ### Settings
@@ -1284,7 +1286,7 @@ Update the `codegen.yml` to read environment variables:
 
 ```yml
 overwrite: true
-schema: '${SCHEMA:http://localhost:4000}'
+schema: '${REACT_APP_APOLLO_SERVER:http://localhost:4000}'
 documents: './src/graphql/**/*.{ts,tsx,js,jsx}'
 generates:
   src/generated/apollo-components.tsx:

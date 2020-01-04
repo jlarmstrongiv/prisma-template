@@ -23,7 +23,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "codegen": "graphql-codegen --watch",
-    "presurge": "SCHEMA=https://immense-badlands-61685.herokuapp.com/ graphql-codegen && npm run build",
+    "presurge": "env $(cat .env | xargs) graphql-codegen && npm run build",
     "surge": "npx surge --domain prisma-project-name.surge.sh --project ./build",
     "postinstall": "npx replace-in-file \"protocol: 'ws',\" \"protocol: window.location.protocol === 'https:' ? 'wss' : 'ws',\" node_modules/react-dev-utils/webpackHotDevClient.js"
   },
