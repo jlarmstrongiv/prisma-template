@@ -1,5 +1,5 @@
 overwrite: true
-schema: 'http://localhost:4000'
+schema: '${SCHEMA:http://localhost:4000}'
 documents: './src/graphql/**/*.{ts,tsx,js,jsx}'
 generates:
   src/generated/apollo-components.tsx:

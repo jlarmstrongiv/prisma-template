@@ -1,4 +1,5 @@
 /generated
+.env.prod
 
 # Created by https://www.gitignore.io/api/node,linux,macos,windows
 # Edit at https://www.gitignore.io/?templates=node,linux,macos,windows
@@ -108,8 +109,8 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
-# .env
-# .env.test
+.env
+.env.test
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

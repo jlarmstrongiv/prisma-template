@@ -5,6 +5,8 @@ import schema from './schema';
 const server = new ApolloServer({
   schema,
   context: { prisma },
+  introspection: true,
+  playground: false,
 });
 
 export default server;

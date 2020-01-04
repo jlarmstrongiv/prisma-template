@@ -682,6 +682,8 @@ generates:
 
 Add `graphql-codegen` as a developer dependency by running `npm install -D @graphql-codegen/cli @graphql-codegen/core @graphql-codegen/typescript @graphql-codegen/typescript-operations @graphql-codegen/typescript-react-apollo`.
 
+It may be necessary to [downgrade](https://github.com/dotansimha/graphql-code-generator/issues/3209) all `@graphql-codegen` packages to `1.9.1`
+
 Update your `package.json` with a script to automatically generate your files. Then, run `npm run codegen`.
 
 If working in VS Code Online, it is necessary to patch a create-react-app bug with a `postinstall` script. You may need to delete `node_modules` and run `npm install` again.
@@ -760,7 +762,7 @@ const CreateUser = () => {
   });
 
   return (
-    <form>
+    <form onSubmit={event => event.preventDefault()}>
       <label htmlFor="name-input">Name: </label>
       <input
         id="name-input"
@@ -861,3 +863,433 @@ const CustomNavLink = ({ children, to, exact }) => {
 
 export default CustomNavLink;
 ```
+
+# Deployment
+
+## Prisma.io
+
+Login to [prisma.io](https://app.prisma.io/login).
+
+Check to see if you have a connected Heroku account under `settings`. If not, create one.
+
+Navigate to `servers`. Click `Add Server` and select all the Heroku options.
+
+Comment out your existing `endpoint` inside the `prisma.yml` file. Run `prisma deploy` and select your Heroku production database.
+
+## Server
+
+### Settings
+
+Update the `prisma.yml` to use .env variables.
+
+```yml
+# File paths are relative to project root folder
+
+# Defines your models, each model is mapped to the database as a table.
+datamodel: datamodel.graphql
+
+# Specifies the language and directory for the generated Prisma client.
+generate:
+  - generator: typescript-client
+    output: ../generated/prisma-client/
+
+# Ensures Prisma client is re-generated after a datamodel change.
+hooks:
+  post-deploy:
+    - npx prisma generate
+    - npx nexus-prisma-generate --client ./generated/prisma-client --output ./generated/nexus-prisma
+
+# Seeds initial data into the database by running a script.
+seed:
+  run: npx ts-node-dev --no-notify --transpileOnly ./seed/index
+
+# Specifies the HTTP endpoint of your Prisma API.
+endpoint: ${env:PRISMA_ENDPOINT}
+
+# Keep the prisma service secure
+secret: ${env:PRISMA_SECRET}
+```
+
+Create environment files for your deployments:
+
+`.env`
+
+```
+PRISMA_ENDPOINT=https://us1.prisma.sh/john-armstrong/prisma-project-name-dev/dev
+PRISMA_SECRET=DEVELOPMENT_SECRET
+```
+
+`.env.prod`
+
+```
+PRISMA_ENDPOINT=https://prisma-project-name-6c807c47e2.herokuapp.com/prisma-project-name-prod/prod
+PRISMA_SECRET=vuha*eiDy&IYG&1Go@pUC*F7ObyUDI49
+```
+
+### Package.json
+
+Update your `server/package.json` with scripts for heroku, and move typescript to the dependencies from developer dependencies.
+
+```json
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --no-notify --respawn --transpileOnly ./src",
+    "start": "npx ts-node --transpile-only ./src",
+    "heroku-init": "npx heroku create",
+    "heroku-config": "npx heroku config:set $(cat .env.prod | sed '/^$/d; /#[[:print:]]*$/d')",
+    "heroku-push": "git push heroku master",
+    "heroku-postbuild": "npx prisma generate && npx nexus-prisma-generate --client ./generated/prisma-client --output ./generated/nexus-prisma",
+    "login": "npx prisma login",
+    "deploy": "npx prisma deploy",
+    "reset": "npx prisma reset",
+    "seed": "npx prisma seed",
+    "seed:watch": "npx ts-node-dev --respawn --no-notify --transpileOnly ./seed/index"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node-dev": "^1.0.0-pre.44"
+  },
+  "dependencies": {
+    "apollo-server": "^2.9.14",
+    "graphql": "^14.5.8",
+    "nexus": "^0.11.7",
+    "nexus-prisma": "^0.3.8",
+    "prisma-client-lib": "^1.34.10",
+    "typescript": "^3.7.4"
+  }
+}
+```
+
+### ApolloServer
+
+Inside `server/src/server.ts`, update the server options:
+
+```ts
+import { ApolloServer } from 'apollo-server';
+import { prisma } from '../generated/prisma-client';
+import schema from './schema';
+
+const server = new ApolloServer({
+  schema,
+  context: { prisma },
+  introspection: true,
+  playground: false,
+});
+
+export default server;
+```
+
+Inside `server/src/index.ts`, update the port options:
+
+```ts
+import server from './server';
+
+server.listen({ port: process.env.PORT || 4000 }, () =>
+  console.log(`🚀 Server ready at http://localhost:4000`),
+);
+```
+
+## React
+
+### Environment
+
+Create environment files for your deployments:
+
+```
+REACT_APP_APOLLO_SERVER_ENDPOINT="https://immense-badlands-61685.herokuapp.com/"
+```
+
+### index.js
+
+Update the `client/src/index.js` to use the environment variable:
+
+```jsx
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from 'components/App/App';
+
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+import { BrowserRouter as Router } from 'react-router-dom';
+
+import ApolloClient from 'apollo-boost';
+import { ApolloProvider } from '@apollo/react-hooks';
+
+const client = new ApolloClient({
+  uri: process.env.REACT_APP_APOLLO_SERVER_ENDPOINT || 'http://localhost:4000',
+});
+
+const root = (
+  <Router>
+    <ApolloProvider client={client}>
+      <App />
+    </ApolloProvider>
+  </Router>
+);
+
+ReactDOM.render(root, document.getElementById('root'));
+```
+
+### package.json
+
+Update the package.json scripts for `surge.sh` and `codegen`:
+
+```json
+{
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.3.2",
+    "@testing-library/user-event": "^7.1.2",
+    "apollo-boost": "^0.4.7",
+    "bootstrap": "^4.4.1",
+    "graphql": "^14.5.8",
+    "react": "^16.12.0",
+    "react-apollo": "^3.1.3",
+    "react-bootstrap": "^1.0.0-beta.16",
+    "react-dom": "^16.12.0",
+    "react-router-bootstrap": "^0.25.0",
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "3.3.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "codegen": "graphql-codegen --watch",
+    "presurge": "SCHEMA=https://immense-badlands-61685.herokuapp.com/ graphql-codegen && npm run build",
+    "surge": "npx surge --domain prisma-project-name.surge.sh --project ./build",
+    "postinstall": "npx replace-in-file \"protocol: 'ws',\" \"protocol: window.location.protocol === 'https:' ? 'wss' : 'ws',\" node_modules/react-dev-utils/webpackHotDevClient.js"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^1.9.1",
+    "@graphql-codegen/core": "^1.9.1",
+    "@graphql-codegen/typescript": "^1.9.1",
+    "@graphql-codegen/typescript-operations": "^1.9.1",
+    "@graphql-codegen/typescript-react-apollo": "^1.9.1",
+    "typescript": "^3.7.4"
+  }
+}
+```
+
+### Codegen
+
+Update the `codegen.yml` to read environment variables:
+
+```yml
+overwrite: true
+schema: '${SCHEMA:http://localhost:4000}'
+documents: './src/graphql/**/*.{ts,tsx,js,jsx}'
+generates:
+  src/generated/apollo-components.tsx:
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'
+      - 'typescript-react-apollo'
+    config:
+      withHooks: true
+```
+
+### .gitignore
+
+Create a `.gitignore` file in both client and server:
+
+```
+/src/generated
+
+/generated
+.env.prod
+
+# Created by https://www.gitignore.io/api/node,linux,macos,windows
+# Edit at https://www.gitignore.io/?templates=node,linux,macos,windows
+
+### Linux ###
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+### Node ###
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript v1 declaration files
+typings/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+### Windows ###
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# End of https://www.gitignore.io/api/node,linux,macos,windows
+```
+
+## Deploy
+
+In the `server` folder,
+
+- Run `npm run heroku-init`
+- Run `npm run heroku-config`
+- Run `git init`
+- Run `git add -A`
+- Run `git commit -m "feat: deploy to heroku"`
+- Run `npm run heroku-push`
+
+In the `client` folder,
+
+- Run `npm run surge`

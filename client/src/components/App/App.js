@@ -34,6 +34,7 @@ const Users = () => {
     return 'Loading…';
   }
   if (error) {
+    console.log(error);
     return 'Error…';
   }
   return data.users.map(({ id, name }) => (
@@ -54,7 +55,7 @@ const CreateUser = () => {
   });
 
   return (
-    <form>
+    <form onSubmit={event => event.preventDefault()}>
       <label htmlFor="name-input">Name: </label>
       <input
         id="name-input"

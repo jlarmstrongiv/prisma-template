@@ -1,8 +1,5 @@
 # File paths are relative to project root folder
 
-# Specifies the HTTP endpoint of your Prisma API.
-# endpoint: https://us1.prisma.sh/john-armstrong/project-name-server/dev
-
 # Defines your models, each model is mapped to the database as a table.
 datamodel: datamodel.graphql
 
@@ -20,3 +17,9 @@ hooks:
 # Seeds initial data into the database by running a script.
 seed:
   run: npx ts-node-dev --no-notify --transpileOnly ./seed/index
+
+# Specifies the HTTP endpoint of your Prisma API.
+endpoint: ${env:PRISMA_ENDPOINT}
+
+# Keep the prisma service secure
+secret: ${env:PRISMA_SECRET}
