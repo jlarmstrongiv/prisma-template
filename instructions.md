@@ -1312,3 +1312,50 @@ In the `server` folder,
 In the `client` folder,
 
 - Run `npm run surge`
+
+# Redeployment
+
+Unfortunately, some repos needed brute force to be pushed to github, which broke pushing to heroku. You will need to follow similar steps to redeploy your project to a new database, service, server, and static host (keep the old one as a demo). More in-depth details are in the deployment section above.
+
+- Login to prisma.io and create a new server with database on Heroku. Leave your existing server as a demo.
+- In VS Code online, `git clone` https://github.com/USERNAME/PROJECT-NAME
+- run `npm install -g prisma heroku surge`
+- run `prisma login`, `heroku login`, and `surge login`
+- `cd server`
+  - `npm install`
+  - `npx prisma deploy`
+    - Run this command twice (delete the endpoint to run again). Use a demo server from prisma.io for the .env and your production server for .env.prod
+- `cd ..` and `cd client`
+
+  - `npm install`
+
+- create a new `.env` and `.env.prod` inside of the server folder.
+  - `.env`
+
+```
+PRISMA_ENDPOINT=https://us1.prisma.sh/john-armstrong/prisma-project-name-dev/dev
+PRISMA_SECRET=DEVELOPMENT_SECRET
+```
+
+- `.env.prod`
+
+```
+PRISMA_ENDPOINT=https://prisma-project-name-6c807c47e2.herokuapp.com/prisma-project-name-prod/prod
+PRISMA_SECRET=randomstringofletters
+```
+
+- In `server`, run
+  - `git init` to create a new git repo for heroku
+  - `git add .` add all your files to the git repo
+  - `git commit -m "Example message or Deploy to Heroku"` commit (save) your files to the git repo
+  - `npm run heroku-init` create your node server
+  - `npm run heroku-config` push your environment variables to your node server
+  - `npm run heroku-push` push your code to the node server
+- In `client`, create an `.env` file with your node server endpoint.
+
+```
+REACT_APP_APOLLO_SERVER_ENDPOINT="https://immense-badlands-61685.herokuapp.com/"
+```
+
+- Rename your domain inside of the package.json > scripts > surge > `--domain new-project-name.surge.sh`
+- Run `npm run surge`
